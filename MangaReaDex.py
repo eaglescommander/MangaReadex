@@ -24,10 +24,6 @@ class MainGUI():
         self.driver = webdriver.Firefox(options=options)
 
         self.header = Frame(self.root, height=100, width=900)
-        self.body = Frame(self.root, height=900, width=930,
-                          highlightbackground="blue",
-                          highlightcolor="blue",
-                          highlightthickness=1)
         self.lefthead = Frame(self.header, height=80, width=465,
                               highlightbackground="green",
                               highlightcolor="green",
@@ -37,7 +33,11 @@ class MainGUI():
                                highlightcolor="green",
                                highlightthickness=1)
         self.prighthead = Frame(self.righthead, height=35, width=465)
-        self.bottomhead = Frame(self.header, height=20, width=930,
+        self.body = Frame(self.root, height=900, width=930,
+                          highlightbackground="blue",
+                          highlightcolor="blue",
+                          highlightthickness=1)
+        self.footer = Frame(self.root, height=20, width=930,
                                 highlightbackground="red",
                                 highlightcolor="red",
                                 highlightthickness=1)
@@ -46,23 +46,23 @@ class MainGUI():
         self.body.pack_propagate(False)
         self.lefthead.pack_propagate(False)
         self.righthead.pack_propagate(False)
-        self.bottomhead.pack_propagate(False)
+        self.footer.pack_propagate(False)
 
         self.header.pack()
         self.body.pack()
+        self.footer.pack()
         
         self.lefthead.grid(row=0, column=0)
         self.righthead.grid(row=0, column=1)
-        self.bottomhead.grid(row=1, column=0, columnspan=2)
         self.prighthead.pack(side=BOTTOM)
 
         self.manga = Manga(self.body, width=907, height=1200,
-                           scrollregion=(0,0,900,1250), driver=self.driver)
+                           scrollregion=(0,0,900,1300), driver=self.driver)
         
         manga_label = Label(self.lefthead,
                             text="Enter your manga title", font=(22))
         chapter_label = Label(self.righthead,
-                            text="Enter your chapter number", font=(14))
+                            text="Pick your chapter", font=(14))
         page_label = Label(self.prighthead,
                            text="Page :", font=(14))
 
@@ -79,12 +79,12 @@ class MainGUI():
         page_label.pack(side=LEFT)
         self.manga.page_box.pack(side=RIGHT)
 
-        left_button = Button(self.bottomhead, text="<-",
+        left_button = Button(self.footer, text="<-",
                              command = self.prev_page,
-                             width=20, font=(16))
-        right_button = Button(self.bottomhead, text="->",
+                             width=51, font=(16))
+        right_button = Button(self.footer, text="->",
                               command = self.next_page,
-                              width=20, font=(16))
+                              width=51, font=(16))
 
         left_button.pack(side=LEFT)
         right_button.pack(side=RIGHT)
@@ -113,6 +113,7 @@ class MainGUI():
                            self.jump_to)
 
         self.root.bind('<MouseWheel>', self.mousewheel)
+        self.manga.bind('<Button-1>', self.click)
         
         self.root.bind('<Right>', self.next_page)
         self.root.bind('<Left>', self.prev_page)
@@ -123,11 +124,12 @@ class MainGUI():
     def update_manga_list(self, event):
         self.title_dir = self.manga.find_manga(self.manga.manga_box.get())
         self.manga.manga_box['values'] = [title for title in self.title_dir.keys()]
-        
-        self.manga.chapter_box['values'] = []
-        self.manga.page_box['values'] = []
 
     def update_chapter_list(self, event):
+        self.manga.chapter_box.set('')
+        self.manga.page_box.set('')
+        self.manga.page_box['values'] = []
+        
         title = self.manga.manga_box.get()
         href = self.title_dir[title]
         
@@ -148,11 +150,23 @@ class MainGUI():
         
         self.manga.page_box['values'] = [num for num in self.page_dir.keys()]
 
+    def click(self, event):
+        if int(event.x) < 465:
+            self.prev_page()
+        else:
+            self.next_page()
+
     def next_page(self, event=None):
-        self.manga.change_page(1)
+        try:
+            self.manga.change_page(1)
+        except Exception:
+            pass
 
     def prev_page(self, event=None):
-        self.manga.change_page(-1)
+        try:
+            self.manga.change_page(-1)
+        except Exception:
+            pass
 
     def jump_to(self, event):
         page = self.manga.page_box.get()
