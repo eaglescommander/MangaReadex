@@ -4,7 +4,9 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from time import sleep
 from tkinter import *
+from tkinter.ttk import Combobox
 from PIL import Image, ImageTk
+from bs4 import BeautifulSoup
 
 class MainGUI():
 
@@ -14,166 +16,268 @@ class MainGUI():
         self.create_gui()
 
     def create_gui(self):
-        self.root.title("Mangareader v1.0 - By Nadhif")
-        self.root.geometry("1300x1080")
-
-        self.header = Frame(self.root, height=100, width=1300)
-        self.body = Frame(self.root, height=930, width=1300)
-        self.footer = Frame(self.root, height=50, width=1300)
-
-        self.header.pack()
-        self.body.pack()
-        self.footer.pack()
-
-        manga_label = Label(self.header, text="Enter your manga title")
-        chapter_label = Label(self.header, text="Enter your chapter number")
-
-        self.manga_entry = Entry(self.header)
-        self.chapter_entry = Entry(self.header)
-
-        manga_label.pack()
-        self.manga_entry.pack()
-        chapter_label.pack()
-        self.chapter_entry.pack()
-
-        left_button = Button(self.header, text="<-", command=self.event_handler1)
-        right_button = Button(self.header, text="->", command=self.event_handler)
-
-        left_button.pack(side=LEFT)
-        right_button.pack(side=RIGHT)
-
-
-        scrollbar = Scrollbar(self.body, orient=VERTICAL)
-        
-
-        self.manga_entry.bind('<Return>', self.make_image)
-        self.chapter_entry.bind('<Return>', self.make_image)
-
-        self.root.bind('<Right>', self.event_handler)
-        self.root.bind('<Left>', self.event_handler1)
-
-        img = ImageTk.PhotoImage(file="mangareadex.png")
-        self.image = Canvas(self.body, width=930, height=1200, scrollregion=(0,0,900,1400))
-        scrollbar.config(command=self.image.yview)
-        self.image.config(yscrollcommand=scrollbar.set)
-        self.image.image = self.image.create_image(500, 650, image=img)
-        self.image.img = img
-        self.image.pack(side=LEFT)
-        scrollbar.pack(side=RIGHT, fill=Y)
-        
-        
-
-    def mainloop(self):
-        self.root.protocol("WM_DELETE_WINDOW", self.quit)
-        self.root.mainloop()
-
-    def quit(self):
-        try:
-            self.root.destroy()
-            self.manga.driver.quit()
-        except Exception:
-            pass
-
-    def make_image(self, event):
-        manga = self.manga_entry.get()
-        chapter = self.chapter_entry.get()  
-        
-        
-        self.manga = Manga(manga, chapter, self.image)
-        
-
-    def event_handler(self, event=None):
-        try:
-            self.manga.change_page(1)
-        except Exception:
-            pass
-
-    def event_handler1(self, event=None):
-        try:
-            self.manga.change_page(-1)
-        except Exception:
-            pass
-        
-
-class Manga:
-
-    def __init__(self, manga, chapter, image):
-
-        self.manga = manga
-        self.chapter = int(chapter)
-        self.image = image
+        self.root.title("Mangareader v1.1 - By Nadhif")
+        self.root.geometry("1000x1080")
 
         options = Options()
         options.add_argument("--headless")
         self.driver = webdriver.Firefox(options=options)
 
-        self.find_manga()
-        self.find_chapter()
+        self.header = Frame(self.root, height=100, width=900)
+        self.body = Frame(self.root, height=900, width=930,
+                          highlightbackground="blue",
+                          highlightcolor="blue",
+                          highlightthickness=1)
+        self.lefthead = Frame(self.header, height=80, width=465,
+                              highlightbackground="green",
+                              highlightcolor="green",
+                              highlightthickness=1)
+        self.righthead = Frame(self.header, height=80, width=465,
+                               highlightbackground="green",
+                               highlightcolor="green",
+                               highlightthickness=1)
+        self.prighthead = Frame(self.righthead, height=35, width=465)
+        self.bottomhead = Frame(self.header, height=20, width=930,
+                                highlightbackground="red",
+                                highlightcolor="red",
+                                highlightthickness=1)
+
+        self.header.pack_propagate(False)
+        self.body.pack_propagate(False)
+        self.lefthead.pack_propagate(False)
+        self.righthead.pack_propagate(False)
+        self.bottomhead.pack_propagate(False)
+
+        self.header.pack()
+        self.body.pack()
+        
+        self.lefthead.grid(row=0, column=0)
+        self.righthead.grid(row=0, column=1)
+        self.bottomhead.grid(row=1, column=0, columnspan=2)
+        self.prighthead.pack(side=BOTTOM)
+
+        self.manga = Manga(self.body, width=907, height=1200,
+                           scrollregion=(0,0,900,1250), driver=self.driver)
+        
+        manga_label = Label(self.lefthead,
+                            text="Enter your manga title", font=(22))
+        chapter_label = Label(self.righthead,
+                            text="Enter your chapter number", font=(14))
+        page_label = Label(self.prighthead,
+                           text="Page :", font=(14))
+
+        manga_label.pack()
+        chapter_label.pack()
+        
+        self.manga.manga_box = Combobox(self.lefthead, width=50)
+        self.manga.chapter_box = Combobox(self.righthead, width=50, state='readonly')
+        self.manga.page_box = Combobox(self.prighthead, width=10, state='readonly')
+        
+        self.manga.manga_box.pack()
+        self.manga.chapter_box.pack()
+
+        page_label.pack(side=LEFT)
+        self.manga.page_box.pack(side=RIGHT)
+
+        left_button = Button(self.bottomhead, text="<-",
+                             command = self.prev_page,
+                             width=20, font=(16))
+        right_button = Button(self.bottomhead, text="->",
+                              command = self.next_page,
+                              width=20, font=(16))
+
+        left_button.pack(side=LEFT)
+        right_button.pack(side=RIGHT)
+
+        scrollbar = Scrollbar(self.body, orient=VERTICAL)
+        
+        self.manga.config(yscrollcommand=scrollbar.set)
+        self.manga.pack(side=LEFT)
+        img = ImageTk.PhotoImage(file="mangareadex.png")
+        self.manga.image = self.manga.create_image(450, 650, image=img)
+        self.manga.img = img
+
+        scrollbar.config(command=self.manga.yview)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        self.controller()
+
+    def controller(self):
+
+        self.manga.manga_box.bind('<Return>', self.update_manga_list)
+        self.manga.manga_box.bind('<<ComboboxSelected>>',
+                            self.update_chapter_list)
+        self.manga.chapter_box.bind('<<ComboboxSelected>>',
+                            self.update_page_list)
+        self.manga.page_box.bind('<<ComboboxSelected>>',
+                           self.jump_to)
+
+        self.root.bind('<MouseWheel>', self.mousewheel)
+        
+        self.root.bind('<Right>', self.next_page)
+        self.root.bind('<Left>', self.prev_page)
+
+    def mousewheel(self, event):
+        self.manga.yview_scroll(-1*(int(event.delta/120)), 'units')
+
+    def update_manga_list(self, event):
+        self.title_dir = self.manga.find_manga(self.manga.manga_box.get())
+        self.manga.manga_box['values'] = [title for title in self.title_dir.keys()]
+        
+        self.manga.chapter_box['values'] = []
+        self.manga.page_box['values'] = []
+
+    def update_chapter_list(self, event):
+        title = self.manga.manga_box.get()
+        href = self.title_dir[title]
+        
+        self.chapter_dir = self.manga.find_chapter(href)
+        self.manga.chapter_box['values'] = [chapter for chapter in self.chapter_dir.keys()]
+
+    def update_page_list(self, event):
+        self.manga.current_page = 1
+        self.manga.page_box.set(1)
+        
+        chapter = self.manga.chapter_box.get()
+        
+        cha_list = [chapter for chapter in self.chapter_dir.keys()]
+        self.manga.current_chapter = cha_list.index(chapter)
+        
+        id = self.chapter_dir[chapter]
+        self.page_dir = self.manga.find_image(id)
+        
+        self.manga.page_box['values'] = [num for num in self.page_dir.keys()]
+
+    def next_page(self, event=None):
+        self.manga.change_page(1)
+
+    def prev_page(self, event=None):
+        self.manga.change_page(-1)
+
+    def jump_to(self, event):
+        page = self.manga.page_box.get()
+        self.manga.current_page = int(page)
+        self.manga.change_image()
+        
+    def mainloop(self):
+        self.root.protocol("WM_DELETE_WINDOW", self.quit)
+        self.root.mainloop()
+
+    def quit(self):
+        self.root.destroy()
+        self.driver.quit()
+        
+
+class Manga(Canvas):
+
+    def __init__(self, root, width, height, scrollregion, driver):
+        super().__init__(root, width=width, height=height, scrollregion=scrollregion)
+        self.driver = driver
         self.current_page = 1
-        self.find_image()
 
-        
-        
+    def find_manga(self, manga):
 
-    def find_manga(self):
+        print('searching')
         
-        link = "https://mangadex.org/quick_search/" + self.manga
+        link = "https://mangadex.org/quick_search/" + manga
         self.driver.get(link)
-        page_source = self.driver.page_source
-        string_to_find = '<a href="/title/(.*)"><img'
+        parsed_source = BeautifulSoup(self.driver.page_source, 'lxml')
+
+        title_dir = {}
         
-        self.manga_id = re.search(string_to_find, page_source,
-                                  re.I|re.M).group(1)
-
-    def find_chapter(self):
-
-        counter = 1
-        string_to_find = 'data-id="(.*)".*data-title=".*"(.*)data-chapter="' \
-                             + str(self.chapter)\
-                             + '".*data-volume="(.*)".*data-comments="(.*)".*'\
-                             + 'data-read="(.*)".*data-lang="1"'
-        chapter = None
-        while chapter == None:
-            link = "https://mangadex.org/title/" + self.manga_id + "/chapters/"\
-                   + str(counter)
-            self.driver.get(link)
-            page_source = self.driver.page_source
-            
-            counter+=1
-
-            chapter = re.search(string_to_find, page_source, re.M|re.I)
+        title_lst = parsed_source.find_all('a', class_="manga_title")
         
-        self.chapter_id = chapter.group(1)
-        self.chapter_title = chapter.group(2)
+        title = [name['title'] for name in title_lst]
+        link = [name['href'] for name in title_lst]
 
-    def find_image(self):
+        for num in range(0, len(title)):
+            title_dir[title[num]] = link[num]
 
-        link = "https://mangadex.org/chapter/" + self.chapter_id + "/" + str(self.current_page)
-        self.driver.get(link)
-        
+        print("Done!")
+        return title_dir
+
+    def find_chapter(self, href):
+
         self.image_link = None
         
-        while self.image_link == None:
+        link = "https://mangadex.org" + href
+        self.driver.get(link)
+        parsed_source = BeautifulSoup(self.driver.page_source, 'lxml')
+        
+        try:
+            last_page = parsed_source.find('li', class_='page-item paging').a['href']
+        except Exception:
+            last_page = href + "/chapters/1/"
+
+        last_page = "https://mangadex.org" + last_page
+
+        counter = 1
+        self.chapter_dir = {}
+        
+        while link != last_page:
+
+            print(f'{counter} out of {last_page}')
+            
+            link = "https://mangadex.org" + href + "/chapters/" + str(counter) + '/'
+            self.driver.get(link)
             page_source = self.driver.page_source
-            self.image_link = re.search('cursor-pointer" src="(.*)" data-page', page_source, re.I|re.M)
-            sleep(1)
+            parsed_source = BeautifulSoup(self.driver.page_source, 'lxml')
+
+            chapter_lst = parsed_source.find_all('div', {'data-lang' : '1'})
+            
+            chapter = [num['data-chapter'] for num in chapter_lst]
+            chapter_title = [title['data-title'] for title in chapter_lst]
+            chapter_id = [id['data-id'] for id in chapter_lst]
+
+            for num in range(len(chapter)):
+                self.chapter_dir[chapter[num] + " - " + chapter_title[num]] = chapter_id[num]
+
+            counter += 1
+
+        print("Done!")
+        return self.chapter_dir
+
+    def find_image(self, id):
+
+        link = "https://mangadex.org/chapter/" + id + "/" + str(self.current_page)
+        self.driver.get(link)
+        
+        self.total_page, self.image_link = None, None
+        
+        while self.total_page == None or self.image_link == None:
+            page_source = self.driver.page_source
+            parsed_source = BeautifulSoup(page_source, 'lxml')
+            self.image_link = parsed_source.find('img', {'data-chapter':id})
+            self.total_page = parsed_source.find('div', {'role' : 'main'})
+            sleep(0.5)
             print("loading")
 
-        self.image_ext = self.image_link.group(1)[-4:]
-        self.image_id = re.search("(.*)" + str(self.current_page) + self.image_ext, self.image_link.group(1), re.I|re.M).group(1)
+        self.image_link = self.image_link['src']
+        self.total_page = self.total_page['data-total-pages']
+
+        self.image_ext = self.image_link[-4:]
+        self.image_id = re.search("(.*)" + str(self.current_page) + self.image_ext, self.image_link, re.I|re.M).group(1)
         self.image_type = self.image_id[-1]
         self.image_id = self.image_id[:-1]
-
-        pages = re.search('"total-pages">(.*)</span>', page_source, re.M|re.I)
-        self.total_page = pages.group(1)
         
         self.image_link = self.image_id + self.image_type + str(self.current_page) + self.image_ext
 
-        self.change_image()
+        page_dir = {}
 
+        for num in range(1, int(self.total_page) + 1):
+            page_dir[num] = str(num)
+
+        self.change_image()
+        
+        print("Done!")  
+        return page_dir
+    
     def change_page(self, direction):
+        
+        if self.image_link == None:
+            return None
+        
         self.current_page += direction
-        self.image_link = self.image_id + self.image_type + str(self.current_page) + self.image_ext
     
         if direction == 1:
             if self.current_page <= int(self.total_page):
@@ -181,7 +285,6 @@ class Manga:
                 
             elif self.current_page > int(self.total_page):
                 self.change_chapter(1)
-                
 
         else:
             if self.current_page >= 1:
@@ -189,47 +292,57 @@ class Manga:
                 
             elif self.current_page < 1:
                 self.change_chapter(-1)
-                    
-            
+
+        self.page_box.set(self.current_page)
 
     def change_chapter(self, direction):
-        self.chapter += direction
+        self.current_chapter -= direction
+        
+        key = [key for key in self.chapter_dir.keys()]
+        try:
+            key = key[self.current_chapter]
+        except Exceptions:
+            return None
+
+        print(key)
+        id = self.chapter_dir[key]
 
         if direction == 1:
-            self.find_chapter()
             self.current_page = 1
-            self.find_image()
         else:
-            self.find_chapter()
             self.current_page = int(self.total_page)
-            self.find_image()
+        
+        page_dir = self.find_image(id)
+        self.page_box['values'] = [num for num in page_dir.keys()]
+
+        self.chapter_box.set(key)
         
 
     def change_image(self):
-        print(self.image_link)
+        self.image_link = self.image_id + self.image_type + str(self.current_page) + self.image_ext
+        
         try:
             page = Image.open(requests.get(self.image_link, stream=True).raw)
             
         except Exception:
-            if self.image_ext == ".png":
-                self.image_ext = ".jpg"
-            else:
-                self.image_ext = ".png"
+            try:
+                self.image_link = self.image_id + self.image_type + str(self.current_page) + ".jpg"
+                page = Image.open(requests.get(self.image_link, stream=True).raw)
                 
-            self.image_link = self.image_id + self.image_type + str(self.current_page) + self.image_ext
-            print(self.image_link)
-            page = Image.open(requests.get(self.image_link, stream=True).raw)
+            except Exception:
+                try:
+                    self.image_link = self.image_id + self.image_type + str(self.current_page) + ".png"
+                    page = Image.open(requests.get(self.image_link, stream=True).raw)
+                    
+                except Exception:
+                    return None
             
         page = page.resize((920, 1300), Image.LANCZOS)
         img = ImageTk.PhotoImage(page)
 
-        self.image.itemconfig(self.image.image, image =img)
-        self.image.img = img
-        self.image.yview_moveto(0)
-        
-        
-
-        
+        self.itemconfig(self.image, image =img)
+        self.img = img
+        self.yview_moveto(0)
 
 def main():
     root = Tk()
@@ -239,7 +352,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
