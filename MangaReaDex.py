@@ -379,7 +379,6 @@ class Manga(Canvas):
         counter = 1
         try:
             while self.total_page == None or self.image_link == None:
-                print(link)
                 page_source = self.driver.page_source
                 parsed_source = BeautifulSoup(page_source, 'lxml')
                 self.image_link = parsed_source.find('img', {'data-chapter':id})
