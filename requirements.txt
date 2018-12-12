@@ -2,3 +2,4 @@ requests
 selenium
 Pillow
 BeautifulSoup4
+lxml
